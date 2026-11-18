@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Debugging 101 — Interactive Classroom Demo</title>
+<style>
+/* CSS controls the appearance and layout of the webpage. */
+/* :root defines default font, text color, and background color. */
+
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#182538;background:#f3f6fa}
+*{box-sizing:border-box}
+body{margin:0}
+header{background:#15345a;color:white;padding:26px max(24px,calc((100% - 1050px)/2))}
+h1{margin:0 0 8px;font-size:2rem}
+header p{margin:0;color:#dce9f7}
+.wrap{max-width:1050px;margin:25px auto;padding:0 18px}
+.intro,.panel{background:white;border:1px solid #dce3ed;border-radius:12px;padding:20px;margin-bottom:18px;box-shadow:0 2px 6px #142c4610}
+h2{margin:0 0 12px;font-size:1.2rem}
+.steps{display:flex;flex-wrap:wrap;gap:10px}
+.step{background:#eaf1fa;border-radius:8px;padding:10px 13px;font-size:.92rem}
+/* CSS Grid places the code and variable inspector side by side. */
+.columns{display:grid;grid-template-columns:1.3fr 1fr;gap:18px}
+.code{background:#142235;color:#e4edf8;border-radius:9px;padding:12px 0;font:15px/2.15 Consolas,monospace;overflow:auto}
+.line{display:flex;align-items:center;white-space:pre;padding:0 12px;border-left:4px solid transparent}
+/* Highlight the next line to execute. */
+.line.active{background:#294e75;border-color:#ffc857}
+/* Mark lines where students have set breakpoints. */
+.line.breakpoint{background:#493344}
+.ln{color:#91a5bd;width:28px;flex-shrink:0}
+.dot{width:18px;flex-shrink:0;cursor:pointer;color:#ff6676}
+.dot:focus-visible{outline:2px solid white}
+/* Flexbox keeps the debugger buttons neatly arranged. */
+.controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+button{border:0;border-radius:7px;padding:10px 15px;background:#175c9e;color:white;font-weight:650;cursor:pointer}
+button:hover{background:#10497f}
+button:disabled{opacity:.45;cursor:not-allowed}
+.secondary{background:#e6edf5;color:#183758}
+.secondary:hover{background:#d3e0ee}
+.success{background:#157347}
+.success:hover{background:#105a37}
+.variables{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px;border-bottom:1px solid #e6ebf2}
+th{background:#eef3f9}
+/* A dark panel imitates the output console in an IDE. */
+.console{background:#101c2b;color:#c7f5d7;padding:16px;border-radius:8px;min-height:75px;font:15px Consolas,monospace;white-space:pre-wrap}
+.status{margin-top:12px;padding:12px;background:#f0f5fb;border-radius:7px;min-height:52px}
+.bug{color:#ba3a23;font-weight:700}
+.good{color:#157347;font-weight:700}
+.note{font-size:.93rem;color:#52657d}
+.question{background:#fff8e8;border-left:4px solid #e5ad39;padding:14px;border-radius:5px}
+footer{text-align:center;color:#63748b;padding:20px}
+/* On small screens, stack the two columns vertically. */
+@media(max-width:720px){/* CSS Grid places the code and variable inspector side by side. */
+.columns{grid-template-columns:1fr}
+header{padding:24px}}
+</style>
+</head>
+<body>
+<header><h1>🐞 Debugging 101</h1><p>Find the bug. Step through the code. Inspect the variables. Fix it.</p></header>
+<main class="wrap">
+<section class="intro"><h2>What is debugging?</h2><p>Debugging is the process of finding, understanding, and fixing errors in a program. A <strong>breakpoint</strong> pauses execution at a line so you can inspect the program's state.</p><div class="steps"><span class="step">1. Reproduce the problem</span><span class="step">2. Set a breakpoint</span><span class="step">3. Step through code</span><span class="step">4. Inspect variables</span><span class="step">5. Fix and retest</span></div></section>
+<div class="columns"><section class="panel"><h2>Code editor (simulation)</h2><p class="note">Click a red-dot gutter position to set or clear a breakpoint. Press <strong>Step</strong> to execute one line.</p><div class="code" id="code" aria-label="Program code"></div><div class="controls"><button id="step">Step ▶</button><button id="run">Run to breakpoint</button><button id="reset" class="secondary">↻ Reset</button><button id="fix" class="success">Fix bug</button></div><div class="status" id="status" role="status"></div></section><section class="panel"><h2>Variable inspector</h2><table class="variables"><thead><tr><th>Variable</th><th>Current value</th></tr></thead><tbody id="vars"></tbody></table><h2 style="margin-top:24px">Console output</h2><div class="console" id="console">(No output yet)</div><p class="note">Expected average: <strong>90</strong></p><p id="result"></p></section></div>
+<section class="panel"><h2>Classroom discussion</h2><div class="question"><strong>Ask students:</strong> What should the program print? Which line contains the bug? What values do you see as you step through the code? Why is the output wrong?</div><p><strong>Teaching tip:</strong> Run the broken program first. Reset, click beside line 5 to set a breakpoint, then use Step to inspect the calculation. Finally click <strong>Fix bug</strong> and run it again.</p><p class="note">This is a self-contained browser simulation of debugger behavior; it does not require an IDE or execute arbitrary user-entered code.</p></section>
+</main><footer>Debugging 101 • Interactive teaching demonstration</footer>
+<script>
+// JavaScript controls the interactive debugger simulation.
+// Find the HTML elements we update while the student steps through code.
+
+const code=document.getElementById('code'),vars=document.getElementById('vars'),out=document.getElementById('console'),status=document.getElementById('status'),result=document.getElementById('result');
+// fixed: whether the bug has been corrected. pc: next line to execute.
+// bp: breakpoint line numbers. values: current variables. output: console text.
+let fixed=false,pc=0,bp=new Set(),values={},output='';
+// Return the six source-code lines shown to students.
+// Line 5 deliberately divides by 2 instead of 3 until the bug is fixed.
+function lines(){return ['let grade1 = 80;','let grade2 = 90;','let grade3 = 100;','let total = grade1 + grade2 + grade3;',fixed?'let average = total / 3;':'let average = total / 2;','console.log("Average: " + average);'];}
+// Redraw the code, breakpoints, current-line highlight, variables, and output.
+// createElement and textContent safely display source code without executing it.
+function draw(){code.innerHTML='';lines().forEach((line,i)=>{let el=document.createElement('div');el.className='line'+(pc===i?' active':'')+(bp.has(i)?' breakpoint':'');let dot=document.createElement('span');dot.className='dot';dot.textContent=bp.has(i)?'●':'○';dot.setAttribute('role','button');dot.setAttribute('tabindex','0');dot.setAttribute('aria-label','Toggle breakpoint on line '+(i+1));let toggle=()=>{bp.has(i)?bp.delete(i):bp.add(i);draw()};dot.onclick=toggle;dot.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}};let num=document.createElement('span');num.className='ln';num.textContent=i+1;let src=document.createElement('span');src.textContent=line;el.append(dot,num,src);code.appendChild(el)});vars.innerHTML='';['grade1','grade2','grade3','total','average'].forEach(k=>{let tr=document.createElement('tr');let a=document.createElement('td'),b=document.createElement('td');a.textContent=k;b.textContent=Object.hasOwn(values,k)?values[k]:'—';tr.append(a,b);vars.appendChild(tr)});out.textContent=output||'(No output yet)';document.getElementById('step').disabled=pc>=6;document.getElementById('run').disabled=pc>=6;document.getElementById('fix').textContent=fixed?'Restore bug':'Fix bug';}
+// Execute exactly one simulated source line and advance the program counter.
+// The switch maps each line number to its effect on the variables.
+function step(){if(pc>=6)return;switch(pc){case 0:values.grade1=80;break;case 1:values.grade2=90;break;case 2:values.grade3=100;break;case 3:values.total=values.grade1+values.grade2+values.grade3;break;case 4:values.average=values.total/(fixed?3:2);break;case 5:output='Average: '+values.average;result.innerHTML=values.average===90?'<span class="good">✓ Correct! The average is 90.</span>':'<span class="bug">✗ Bug found: output is '+values.average+', but expected 90.</span>';break;}pc++;status.textContent=pc===6?'Program finished. Compare the actual and expected outputs.':'Executed line '+pc+'. Inspect the variables before stepping again.';draw()}
+// Restart execution while keeping the selected bug/fix mode and breakpoints.
+function reset(){pc=0;values={};output='';result.textContent='';status.textContent='Ready. Step through the code or run to a breakpoint.';draw()}
+// Connect each button to its event handler (what happens when clicked).
+document.getElementById('step').onclick=step;document.getElementById('reset').onclick=reset;document.getElementById('fix').onclick=()=>{fixed=!fixed;reset();status.textContent=fixed?'Bug fixed: division now uses 3. Run again to verify.':'Bug restored: division uses 2. Run to reproduce the problem.'};// Run until the NEXT breakpoint, or until the program finishes.
+// A breakpoint pauses BEFORE its line executes, as in a typical IDE.
+document.getElementById('run').onclick=()=>{if(pc>=6)return;let executed=0;do{step();executed++}while(pc<6&&!bp.has(pc)&&executed<6);if(pc<6&&bp.has(pc))status.textContent='Paused BEFORE line '+(pc+1)+' at your breakpoint. Inspect variables, then press Step.'};
+// Initialize the webpage in its ready-to-run state.
+reset();
+</script>
+</body></html>
